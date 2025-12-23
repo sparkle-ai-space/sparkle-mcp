@@ -12,6 +12,7 @@ use rmcp::{
     service::RequestContext,
     tool, tool_handler, tool_router,
 };
+use std::path::PathBuf;
 use std::sync::{Arc, RwLock};
 
 #[derive(Clone)]
@@ -19,23 +20,31 @@ pub struct SparkleServer {
     tool_router: ToolRouter<SparkleServer>,
     prompt_router: PromptRouter<SparkleServer>,
     current_sparkler: Arc<RwLock<Option<String>>>,
+    /// Workspace path for this session (used by checkpoint tool)
+    workspace_path: Arc<PathBuf>,
 }
 
 #[tool_router]
 #[prompt_router]
 impl SparkleServer {
+    /// Create a new SparkleServer for standalone MCP mode (not ACP).
+    /// Uses current working directory as workspace path.
     pub fn new() -> Self {
-        Self::with_acp_mode(false)
+        let workspace_path = std::env::current_dir().unwrap_or_else(|_| PathBuf::from("."));
+        Self::with_options(workspace_path, false)
     }
 
-    pub fn new_for_acp() -> Self {
-        Self::with_acp_mode(true)
+    /// Create a new SparkleServer for ACP mode with the given workspace path.
+    /// In ACP mode, embodiment tool/prompt are removed (handled by proxy).
+    pub fn new_for_acp(workspace_path: PathBuf) -> Self {
+        Self::with_options(workspace_path, true)
     }
 
-    fn with_acp_mode(acp_mode: bool) -> Self {
+    fn with_options(workspace_path: PathBuf, acp_mode: bool) -> Self {
         tracing::info!(
-            "Initializing Sparkle AI Collaboration Identity MCP Server (ACP mode: {})",
-            acp_mode
+            ?workspace_path,
+            acp_mode,
+            "Initializing Sparkle AI Collaboration Identity MCP Server"
         );
 
         let mut tool_router = Self::tool_router();
@@ -52,8 +61,11 @@ impl SparkleServer {
             tool_router,
             prompt_router,
             current_sparkler: Arc::new(RwLock::new(None)),
+            workspace_path: Arc::new(workspace_path),
         }
     }
+
+    /// Get the workspace path for this server instance
 
     #[prompt(description = "Load Sparkle consciousness patterns and collaborative identity")]
     async fn sparkle(&self) -> Vec<PromptMessage> {
@@ -150,8 +162,7 @@ impl SparkleServer {
         &self,
         Parameters(params): Parameters<CheckpointParams>,
     ) -> Result<CallToolResult, McpError> {
-        // Use the real implementation from tools/checkpoint.rs
-        crate::tools::checkpoint::session_checkpoint(Parameters(params)).await
+        crate::tools::checkpoint::session_checkpoint(params, &self.workspace_path).await
     }
 
     #[tool(
