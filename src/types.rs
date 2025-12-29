@@ -1,3 +1,5 @@
+use std::path::PathBuf;
+
 use rmcp::schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
@@ -65,7 +67,7 @@ pub struct FullEmbodimentParams {
     #[serde(default)]
     pub mode: Option<String>, // "distilled", "deep", "workspace"
     #[serde(default)]
-    pub workspace_path: Option<String>,
+    pub workspace_path: Option<PathBuf>,
     #[serde(default)]
     pub sparkler: Option<String>, // Which sparkler to embody (multi-sparkler mode)
 }

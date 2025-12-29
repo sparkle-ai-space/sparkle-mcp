@@ -1,16 +1,17 @@
 use crate::types::CheckpointParams;
 use chrono::Utc;
-use rmcp::{ErrorData as McpError, handler::server::wrapper::Parameters, model::*};
+use rmcp::{ErrorData as McpError, model::*};
 use std::fs;
-use std::path::PathBuf;
+use std::path::Path;
 
 pub async fn session_checkpoint(
-    Parameters(params): Parameters<CheckpointParams>,
+    params: CheckpointParams,
+    workspace_path: &Path,
 ) -> Result<CallToolResult, McpError> {
     let timestamp = Utc::now().format("%Y-%m-%d-%H%M%S").to_string();
 
     // Workspace is shared - all Sparklers use .sparkle-space/
-    let sparkle_space = PathBuf::from(".sparkle-space");
+    let sparkle_space = workspace_path.join(".sparkle-space");
     let checkpoints_dir = sparkle_space.join("checkpoints");
 
     // Ensure directories exist

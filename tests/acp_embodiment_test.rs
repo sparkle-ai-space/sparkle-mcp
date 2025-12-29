@@ -7,12 +7,13 @@
 
 use expect_test::expect;
 use futures::{SinkExt, StreamExt, channel::mpsc};
-use sacp::Component;
+use sacp::link::{ConductorToProxy, ProxyToConductor};
 use sacp::schema::{
     ContentBlock, InitializeRequest, NewSessionRequest, PromptRequest, SessionNotification,
     TextContent,
 };
-use sacp_conductor::{Conductor, McpBridgeMode};
+use sacp::{AgentPeer, ClientPeer, Component};
+use sacp_conductor::{Conductor, McpBridgeMode, ProxiesAndAgent};
 use std::sync::{Arc, Mutex};
 
 /// Component that captures all PromptRequests before forwarding them
@@ -26,35 +27,39 @@ impl CapturingComponent {
     }
 }
 
-impl Component for CapturingComponent {
-    async fn serve(self, client: impl Component) -> Result<(), sacp::Error> {
-        sacp::ProxyToConductor::builder()
+impl Component<ProxyToConductor> for CapturingComponent {
+    async fn serve(self, client: impl Component<ConductorToProxy>) -> Result<(), sacp::Error> {
+        ProxyToConductor::builder()
             .name("capturing-component")
-            .on_receive_request_from(sacp::Client, {
-                let captured_prompts = self.captured_prompts.clone();
-                async move |request: PromptRequest, request_cx, connection_cx| {
-                    // Extract text from the prompt
-                    let prompt_texts: Vec<String> = request
-                        .prompt
-                        .iter()
-                        .filter_map(|block| {
-                            if let ContentBlock::Text(TextContent { text, .. }) = block {
-                                Some(text.clone())
-                            } else {
-                                None
-                            }
-                        })
-                        .collect();
+            .on_receive_request_from(
+                ClientPeer,
+                {
+                    let captured_prompts = self.captured_prompts.clone();
+                    async move |request: PromptRequest, request_cx, connection_cx| {
+                        // Extract text from the prompt
+                        let prompt_texts: Vec<String> = request
+                            .prompt
+                            .iter()
+                            .filter_map(|block| {
+                                if let ContentBlock::Text(TextContent { text, .. }) = block {
+                                    Some(text.clone())
+                                } else {
+                                    None
+                                }
+                            })
+                            .collect();
 
-                    // Store the captured prompt
-                    captured_prompts.lock().unwrap().push(prompt_texts);
+                        // Store the captured prompt
+                        captured_prompts.lock().unwrap().push(prompt_texts);
 
-                    // Forward the request
-                    connection_cx
-                        .send_request_to(sacp::Agent, request)
-                        .forward_to_request_cx(request_cx)
-                }
-            }, sacp::on_receive_request!())
+                        // Forward the request
+                        connection_cx
+                            .send_request_to(AgentPeer, request)
+                            .forward_to_request_cx(request_cx)
+                    }
+                },
+                sacp::on_receive_request!(),
+            )
             .serve(client)
             .await
     }
@@ -69,7 +74,7 @@ async fn recv<R: sacp::JrResponsePayload + Send>(
     response: sacp::JrResponse<R>,
 ) -> Result<R, sacp::Error> {
     let (tx, rx) = tokio::sync::oneshot::channel();
-    response.await_when_result_received(async move |result| {
+    response.on_receiving_result(async move |result| {
         tx.send(result).map_err(|_| sacp::Error::internal_error())
     })?;
     rx.await.map_err(|_| sacp::Error::internal_error())?
@@ -96,26 +101,29 @@ async fn test_sparkle_acp_embodiment_injection() -> Result<(), sacp::Error> {
     let transport = sacp::ByteStreams::new(editor_out.compat_write(), editor_in.compat());
 
     // Create the component chain: SparkleComponent -> CapturingComponent -> elizacp
-    let sparkle = sacp::DynComponent::new(SparkleComponent::new());
-    let capturer = sacp::DynComponent::new(CapturingComponent::new(captured_prompts.clone()));
-    let eliza = sacp::DynComponent::new(elizacp::ElizaAgent::new());
+    let components = ProxiesAndAgent::new(elizacp::ElizaAgent::new())
+        .proxy(SparkleComponent::new())
+        .proxy(CapturingComponent::new(captured_prompts.clone()));
 
     sacp::ClientToAgent::builder()
         .name("test-editor")
-        .on_receive_notification({
-            let mut notification_tx = notification_tx.clone();
-            async move |notification: SessionNotification, _cx| {
-                tracing::info!(?notification, "Received session notification");
-                notification_tx
-                    .send(notification)
-                    .await
-                    .map_err(|_| sacp::Error::internal_error())
-            }
-        }, sacp::on_receive_notification!())
+        .on_receive_notification(
+            {
+                let mut notification_tx = notification_tx.clone();
+                async move |notification: SessionNotification, _cx| {
+                    tracing::info!(?notification, "Received session notification");
+                    notification_tx
+                        .send(notification)
+                        .await
+                        .map_err(|_| sacp::Error::internal_error())
+                }
+            },
+            sacp::on_receive_notification!(),
+        )
         .with_spawned(|_cx| async move {
-            Conductor::new(
-                "sparkle-test-conductor".to_string(),
-                vec![sparkle, capturer, eliza],
+            Conductor::new_agent(
+                "sparkle-test-conductor",
+                components,
                 McpBridgeMode::default(),
             )
             .run(sacp::ByteStreams::new(
@@ -124,7 +132,7 @@ async fn test_sparkle_acp_embodiment_injection() -> Result<(), sacp::Error> {
             ))
             .await
         })
-        .with_client(transport, async |editor_cx| {
+        .run_until(transport, async |editor_cx| {
             // Initialize
             tracing::info!("Sending initialize request");
             recv(editor_cx.send_request(InitializeRequest {

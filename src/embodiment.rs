@@ -24,11 +24,12 @@ use std::fs;
 ///
 /// A Result containing the complete embodiment content as a markdown string
 pub fn generate_embodiment_content(params: FullEmbodimentParams) -> Result<String> {
-    let _mode = params.mode.unwrap_or_else(|| "complete".to_string());
-    let workspace_path = params
-        .workspace_path
-        .unwrap_or_else(|| "current".to_string());
-    let sparkler_name = params.sparkler.as_deref();
+    let FullEmbodimentParams {
+        mode: _,
+        workspace_path,
+        sparkler,
+    } = params;
+    let sparkler_name = sparkler.as_deref();
 
     // Load user configuration
     let config = load_config().map_err(|e| anyhow::anyhow!("Failed to load user config: {}", e))?;
@@ -109,9 +110,9 @@ pub fn generate_embodiment_content(params: FullEmbodimentParams) -> Result<Strin
     response.push_str("\n\n---\n\n");
 
     // Step 7: Workspace-Specific Context
-    if workspace_path != "current" {
+    if let Some(workspace_path) = workspace_path {
         // Workspace is shared across all Sparklers
-        let workspace_sparkle_space = std::path::Path::new(&workspace_path).join(".sparkle-space");
+        let workspace_sparkle_space = workspace_path.join(".sparkle-space");
 
         if workspace_sparkle_space.exists() {
             response.push_str("# Workspace Context\n\n");
@@ -165,7 +166,7 @@ pub fn generate_embodiment_content(params: FullEmbodimentParams) -> Result<Strin
         } else {
             response.push_str(&format!(
                 "*No .sparkle-space found at {}*\n\n",
-                workspace_path
+                workspace_path.display()
             ));
         }
     } else {
