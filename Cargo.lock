@@ -4,15 +4,16 @@ version = 4
 
 [[package]]
 name = "agent-client-protocol-schema"
-version = "0.6.3"
+version = "0.10.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "16d08d095e8069115774caa50392e9c818e3fb1c482ef4f3153d26b4595482f2"
+checksum = "6903a00e8ac822f9bacac59a1932754d7387c72ebb7c9c7439ad021505591da4"
 dependencies = [
  "anyhow",
  "derive_more",
  "schemars",
  "serde",
  "serde_json",
+ "strum",
 ]
 
 [[package]]
@@ -454,9 +455,9 @@ checksum = "d0881ea181b1df73ff77ffaaf9c7544ecc11e82fba9b5f27b262a3c73a332555"
 
 [[package]]
 name = "elizacp"
-version = "10.0.0-alpha.3"
+version = "10.0.0-alpha.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "99ae8d39f6f51f92e733a87795cd18fbe31a4de95f289ee2dc8f9a2bf77ba5c4"
+checksum = "787774a2294259d5c669f446cd795ac6a0b26c85a5646bd26503e5a9afc9df00"
 dependencies = [
  "agent-client-protocol-schema",
  "anyhow",
@@ -1711,9 +1712,9 @@ checksum = "28d3b2b1366ec20994f1fd18c3c594f05c5dd4bc44d8bb0c1c632c8d6829481f"
 
 [[package]]
 name = "sacp"
-version = "10.0.0-alpha.3"
+version = "10.0.0-alpha.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "15a8b2266ce4c22bb4f7b7744a49dfed3890ff8c0f0df0b66794a973d639331c"
+checksum = "d259b419c5d58089fa36e85e15dcdca8af29ad0ae54cac5e6d8c6cface11b303"
 dependencies = [
  "agent-client-protocol-schema",
  "anyhow",
@@ -1736,9 +1737,9 @@ dependencies = [
 
 [[package]]
 name = "sacp-conductor"
-version = "10.0.0-alpha.3"
+version = "10.0.0-alpha.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "73e2354fc183b0785bf6f4a2d35eb4b37c6f456855a405d45aa6382ec7b8d120"
+checksum = "27c9e69494b2ce0daa1634ddbc4e9bd693a82c1df9f063ad08189c72f5593dec"
 dependencies = [
  "agent-client-protocol-schema",
  "anyhow",
@@ -1780,9 +1781,9 @@ dependencies = [
 
 [[package]]
 name = "sacp-rmcp"
-version = "10.0.0-alpha.3"
+version = "10.0.0-alpha.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a8b57a06e12289d38ee6399db37f938812eeb35ecef2ff4217e6ff5571c8ce98"
+checksum = "1dc93a7b6e34e180ef6ca11d17fa464c74144df76d53c8371169c47501071108"
 dependencies = [
  "futures",
  "rmcp",
@@ -1793,9 +1794,9 @@ dependencies = [
 
 [[package]]
 name = "sacp-tokio"
-version = "10.0.0-alpha.3"
+version = "10.0.0-alpha.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "8910611fd0f9ba151e6da0947b765251f4d5fecddf6a7759d2aca48db559b5c5"
+checksum = "263fea20f24ec3fb64f2349e74f43ed763ae620f5ea309e12b03f996a4c609ab"
 dependencies = [
  "futures",
  "sacp",
@@ -2073,6 +2074,27 @@ name = "strsim"
 version = "0.11.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "7da8b5736845d9f2fcb837ea5d9e2628564b3b043a70948a3f0b778838c5fb4f"
+
+[[package]]
+name = "strum"
+version = "0.27.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "af23d6f6c1a224baef9d3f61e287d2761385a5b88fdab4eb4c6f11aeb54c4bcf"
+dependencies = [
+ "strum_macros",
+]
+
+[[package]]
+name = "strum_macros"
+version = "0.27.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "7695ce3845ea4b33927c055a39dc438a45b059f7c1b3d91d38d10355fb8cbca7"
+dependencies = [
+ "heck",
+ "proc-macro2",
+ "quote",
+ "syn",
+]
 
 [[package]]
 name = "subtle"

@@ -20,7 +20,7 @@ path = "src/main.rs"
 rmcp = { version = "0.12", features = ["server", "transport-io", "schemars"] }
 
 # ACP SDK
-sacp = "10.0.0-alpha.3"
+sacp = "10.0.0-alpha.4"
 
 # JSON serialization + schema
 serde = { version = "1.0", features = ["derive"] }
@@ -55,11 +55,11 @@ clap = { version = "4.0", features = ["derive"] }
 # File system and config
 dirs = "5.0"
 toml = "0.8"
-sacp-tokio = "10.0.0-alpha.3"
-sacp-rmcp = "10.0.0-alpha.3"
+sacp-tokio = "10.0.0-alpha.4"
+sacp-rmcp = "10.0.0-alpha.4"
 
 [dev-dependencies]
 # Testing utilities for ACP components
-elizacp = "10.0.0-alpha.3"
-sacp-conductor = "10.0.0-alpha.3"
+elizacp = "10.0.0-alpha.4"
+sacp-conductor = "10.0.0-alpha.4"
 expect-test = "1.5"

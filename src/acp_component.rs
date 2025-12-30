@@ -170,15 +170,14 @@ impl Component<ProxyToConductor> for SparkleComponent {
                                 .map_err(sacp::util::internal_error)?;
 
                             connection_cx
-                                .send_request_to(AgentPeer, PromptRequest {
-                                    session_id: session_id.clone(),
-                                    prompt: vec![embodiment_content.into()],
-                                    meta: None,
-                                })
+                                .send_request_to(AgentPeer, PromptRequest::new(
+                                    session_id.clone(),
+                                    vec![embodiment_content.into()],
+                                ))
                                 .on_receiving_result(async move |result| match result {
                                     Ok(PromptResponse {
                                         stop_reason: StopReason::EndTurn,
-                                        meta: _,
+                                        ..
                                     }) => {
                                         tracing::info!(
                                             ?session_id,
@@ -190,7 +189,7 @@ impl Component<ProxyToConductor> for SparkleComponent {
                                     }
                                     Ok(PromptResponse {
                                         stop_reason,
-                                        meta: _,
+                                        ..
                                     }) => {
                                         tracing::warn!(
                                             ?session_id,

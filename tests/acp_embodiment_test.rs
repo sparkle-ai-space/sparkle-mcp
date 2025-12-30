@@ -9,8 +9,8 @@ use expect_test::expect;
 use futures::{SinkExt, StreamExt, channel::mpsc};
 use sacp::link::{ConductorToProxy, ProxyToConductor};
 use sacp::schema::{
-    ContentBlock, InitializeRequest, NewSessionRequest, PromptRequest, SessionNotification,
-    TextContent,
+    ContentBlock, InitializeRequest, NewSessionRequest, PromptRequest, ProtocolVersion,
+    SessionNotification, TextContent,
 };
 use sacp::{AgentPeer, ClientPeer, Component};
 use sacp_conductor::{Conductor, McpBridgeMode, ProxiesAndAgent};
@@ -135,36 +135,22 @@ async fn test_sparkle_acp_embodiment_injection() -> Result<(), sacp::Error> {
         .run_until(transport, async |editor_cx| {
             // Initialize
             tracing::info!("Sending initialize request");
-            recv(editor_cx.send_request(InitializeRequest {
-                protocol_version: Default::default(),
-                client_capabilities: Default::default(),
-                meta: None,
-                client_info: None,
-            }))
-            .await?;
+            recv(editor_cx.send_request(InitializeRequest::new(ProtocolVersion::LATEST))).await?;
 
             // Create session
             tracing::info!("Creating new session");
-            let session = recv(editor_cx.send_request(NewSessionRequest {
-                cwd: Default::default(),
-                mcp_servers: vec![],
-                meta: None,
-            }))
-            .await?;
+            let session =
+                recv(editor_cx.send_request(NewSessionRequest::new(std::path::PathBuf::new())))
+                    .await?;
 
             tracing::info!(session_id = %session.session_id.0, "Session created");
 
             // Send a prompt - this should trigger embodiment injection
             tracing::info!("Sending first prompt - should trigger embodiment");
-            let _prompt_response = recv(editor_cx.send_request(PromptRequest {
-                session_id: session.session_id.clone(),
-                prompt: vec![ContentBlock::Text(TextContent {
-                    annotations: None,
-                    text: "hi".to_string(),
-                    meta: None,
-                })],
-                meta: None,
-            }))
+            let _prompt_response = recv(editor_cx.send_request(PromptRequest::new(
+                session.session_id.clone(),
+                vec!["hi".into()],
+            )))
             .await?;
 
             tracing::info!("Prompt completed");
