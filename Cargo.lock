@@ -455,9 +455,9 @@ checksum = "d0881ea181b1df73ff77ffaaf9c7544ecc11e82fba9b5f27b262a3c73a332555"
 
 [[package]]
 name = "elizacp"
-version = "10.0.0-alpha.4"
+version = "10.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "787774a2294259d5c669f446cd795ac6a0b26c85a5646bd26503e5a9afc9df00"
+checksum = "4f0076b9b1a59653610ab02ef229f71272064c0b47ffcaec734063ca01ee7236"
 dependencies = [
  "agent-client-protocol-schema",
  "anyhow",
@@ -1712,9 +1712,9 @@ checksum = "28d3b2b1366ec20994f1fd18c3c594f05c5dd4bc44d8bb0c1c632c8d6829481f"
 
 [[package]]
 name = "sacp"
-version = "10.0.0-alpha.4"
+version = "10.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d259b419c5d58089fa36e85e15dcdca8af29ad0ae54cac5e6d8c6cface11b303"
+checksum = "47c1b52b3ee79933b19f2ce71945eaa17ef91ee68444e6716d05e335763af1a4"
 dependencies = [
  "agent-client-protocol-schema",
  "anyhow",
@@ -1737,9 +1737,9 @@ dependencies = [
 
 [[package]]
 name = "sacp-conductor"
-version = "10.0.0-alpha.4"
+version = "10.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "27c9e69494b2ce0daa1634ddbc4e9bd693a82c1df9f063ad08189c72f5593dec"
+checksum = "7ee5ed27db7ad9ff65c75b71cf9052f1798eb64d00b34eac0eb695f977e4173b"
 dependencies = [
  "agent-client-protocol-schema",
  "anyhow",
@@ -1770,9 +1770,9 @@ dependencies = [
 
 [[package]]
 name = "sacp-derive"
-version = "10.0.0-alpha.2"
+version = "10.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b9b8803d6b4e86f5c1dc2fb0f0a2545f8504beb93492881ca4cd9982130efd12"
+checksum = "92150f9246c01d501855e34469810a82adc27c416c8d8e21665567f8cd966f29"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -1781,9 +1781,9 @@ dependencies = [
 
 [[package]]
 name = "sacp-rmcp"
-version = "10.0.0-alpha.4"
+version = "10.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "1dc93a7b6e34e180ef6ca11d17fa464c74144df76d53c8371169c47501071108"
+checksum = "0eac402a5c3424090e9008fd06735573186216ed62436d8aad78dd079b76a39c"
 dependencies = [
  "futures",
  "rmcp",
@@ -1794,9 +1794,9 @@ dependencies = [
 
 [[package]]
 name = "sacp-tokio"
-version = "10.0.0-alpha.4"
+version = "10.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "263fea20f24ec3fb64f2349e74f43ed763ae620f5ea309e12b03f996a4c609ab"
+checksum = "ebf224083e9a8cb85b708a3e560c660c411641ba8c27aa1c11110bd90c0641b6"
 dependencies = [
  "futures",
  "sacp",
@@ -1809,9 +1809,9 @@ dependencies = [
 
 [[package]]
 name = "sacp-trace-viewer"
-version = "10.0.0-alpha.2"
+version = "10.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "352b6d3207eda8f1037fe4200098740eee1406262528efa738d39d05a63bde0d"
+checksum = "bc1de10c1c409ff66899faa59ad3e1d576e6177fc80a1f49c476a42cf792d47d"
 dependencies = [
  "anyhow",
  "axum",
