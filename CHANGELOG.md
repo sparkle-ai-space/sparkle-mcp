@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.4.2](https://github.com/sparkle-ai-space/sparkle-mcp/compare/v0.4.1...v0.4.2) - 2025-12-30
+
+### Other
+
+- Revert "chore: release v0.5.0"
+- release v0.5.0
+- Merge pull request #33 from nikomatsakis/main
+- Upgrade sacp crates to 10.0
+
 ## [0.4.1](https://github.com/sparkle-ai-space/sparkle-mcp/compare/v0.4.0...v0.4.1) - 2025-12-30
 
 ### Other
