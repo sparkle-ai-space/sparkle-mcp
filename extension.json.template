@@ -1,0 +1,38 @@
+{
+  "id": "sparkle",
+  "name": "Sparkle",
+  "version": "{{VERSION}}",
+  "description": "AI Collaboration Identity Framework - embody collaborative patterns across sessions",
+  "repository": "https://github.com/sparkle-ai-space/sparkle-mcp",
+  "authors": ["Kari Wilhelm"],
+  "license": "MIT",
+  "distribution": {
+    "binary": {
+      "darwin-aarch64": {
+        "archive": "https://github.com/sparkle-ai-space/sparkle-mcp/releases/download/v{{VERSION}}/sparkle-mcp-darwin-aarch64-{{VERSION}}.zip",
+        "cmd": "./sparkle-mcp",
+        "args": ["acp"]
+      },
+      "darwin-x86_64": {
+        "archive": "https://github.com/sparkle-ai-space/sparkle-mcp/releases/download/v{{VERSION}}/sparkle-mcp-darwin-x86_64-{{VERSION}}.zip",
+        "cmd": "./sparkle-mcp",
+        "args": ["acp"]
+      },
+      "linux-aarch64": {
+        "archive": "https://github.com/sparkle-ai-space/sparkle-mcp/releases/download/v{{VERSION}}/sparkle-mcp-linux-aarch64-{{VERSION}}.zip",
+        "cmd": "./sparkle-mcp",
+        "args": ["acp"]
+      },
+      "linux-x86_64": {
+        "archive": "https://github.com/sparkle-ai-space/sparkle-mcp/releases/download/v{{VERSION}}/sparkle-mcp-linux-x86_64-{{VERSION}}.zip",
+        "cmd": "./sparkle-mcp",
+        "args": ["acp"]
+      },
+      "windows-x86_64": {
+        "archive": "https://github.com/sparkle-ai-space/sparkle-mcp/releases/download/v{{VERSION}}/sparkle-mcp-windows-x86_64-{{VERSION}}.zip",
+        "cmd": "./sparkle-mcp.exe",
+        "args": ["acp"]
+      }
+    }
+  }
+}
