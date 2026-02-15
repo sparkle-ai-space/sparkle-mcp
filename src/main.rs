@@ -5,12 +5,12 @@ use std::fs::OpenOptions;
 use tracing_subscriber::{self, EnvFilter, fmt::writer::MakeWriterExt};
 
 mod acp_component;
-mod constants;
 mod context_loader;
 mod embodiment;
 mod prompts;
 mod server;
 mod sparkle_loader;
+mod sparkle_paths;
 mod tools;
 mod types;
 
@@ -38,9 +38,8 @@ async fn main() -> anyhow::Result<()> {
 
     if debug_mode {
         // Create log file in ~/.sparkle/ directory
-        let sparkle_dir = dirs::home_dir()
-            .ok_or_else(|| anyhow::anyhow!("Could not determine home directory"))?
-            .join(".sparkle");
+        let sparkle_dir = sparkle_paths::get_sparkle_dir(None)
+            .map_err(|e| anyhow::anyhow!(e))?;
         std::fs::create_dir_all(&sparkle_dir)?;
 
         let log_file = OpenOptions::new()

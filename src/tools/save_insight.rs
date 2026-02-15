@@ -1,5 +1,5 @@
-use crate::constants::SPARKLE_DIR;
 use crate::context_loader::{get_context_dir, load_config};
+use crate::sparkle_paths::get_sparkle_dir;
 use crate::types::{InsightType, SaveInsightParams};
 use rmcp::{
     ErrorData as McpError,
@@ -12,11 +12,8 @@ use std::io::Write;
 pub async fn save_insight(
     Parameters(params): Parameters<SaveInsightParams>,
 ) -> Result<CallToolResult, McpError> {
-    // Get home directory
-    let home_dir = dirs::home_dir()
-        .ok_or_else(|| McpError::internal_error("Could not determine home directory", None))?;
-
-    let sparkle_dir = home_dir.join(SPARKLE_DIR);
+    let sparkle_dir = get_sparkle_dir(None)
+        .map_err(|e| McpError::internal_error(e, None))?;
 
     // Load config to determine paths
     let config = load_config()
@@ -110,14 +107,8 @@ pub async fn save_insight(
     })?;
 
     // Return success message
-    let file_display = file_path
-        .strip_prefix(&home_dir)
-        .map(|p| format!("~/{}", p.display()))
-        .unwrap_or_else(|_| file_path.display().to_string());
-
     let result_message = format!(
-        "✨ Insight saved to {}\n\nType: {:?}\nContent: {}\n{}",
-        file_display,
+        "✨ Insight saved!\n\nType: {:?}\nContent: {}\n{}",
         params.insight_type,
         params.content,
         if let Some(context) = &params.context {

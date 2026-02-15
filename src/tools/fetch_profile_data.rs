@@ -81,9 +81,10 @@ pub async fn fetch_profile_data(params: FetchProfileDataParams) -> Result<FetchR
         .unwrap_or_else(|| "the user".to_string());
 
     // Read existing profile
-    let profile_content = dirs::home_dir()
-        .and_then(|home| {
-            let profile_path = home.join(".sparkle/collaborator-profile.md");
+    let profile_content = crate::sparkle_paths::get_sparkle_dir(None)
+        .ok()
+        .and_then(|sparkle_dir| {
+            let profile_path = sparkle_dir.join("collaborator-profile.md");
             std::fs::read_to_string(profile_path).ok()
         })
         .unwrap_or_else(|| "[No existing profile]".to_string());

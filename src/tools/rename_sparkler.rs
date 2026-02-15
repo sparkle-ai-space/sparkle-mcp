@@ -1,5 +1,5 @@
-use crate::constants::SPARKLE_DIR;
 use crate::context_loader::load_config;
+use crate::sparkle_paths::get_sparkle_dir;
 use rmcp::{ErrorData as McpError, handler::server::wrapper::Parameters, model::*};
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
@@ -27,10 +27,8 @@ pub async fn rename_sparkler(
     let mut config = load_config()
         .map_err(|e| McpError::internal_error(format!("Failed to load config: {}", e), None))?;
 
-    let home_dir = dirs::home_dir().ok_or_else(|| {
-        McpError::internal_error("Could not determine home directory".to_string(), None)
-    })?;
-    let sparkle_dir = home_dir.join(SPARKLE_DIR);
+    let sparkle_dir = get_sparkle_dir(None)
+        .map_err(|e| McpError::internal_error(e, None))?;
     let config_path = sparkle_dir.join("config.toml");
 
     let old_name: String;
