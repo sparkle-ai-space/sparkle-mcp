@@ -1,4 +1,4 @@
-use crate::constants::SPARKLE_DIR;
+use crate::sparkle_paths::get_sparkle_dir;
 use crate::types::LoadEvolutionParams;
 use rmcp::{ErrorData as McpError, handler::server::wrapper::Parameters, model::*};
 use std::fs;
@@ -9,8 +9,9 @@ pub async fn load_evolution(
     let mut response = String::new();
 
     // Load all evolution files (skip archive/ subdirectory)
-    let home_dir = dirs::home_dir().unwrap_or_default();
-    let evolution_dir = home_dir.join(SPARKLE_DIR).join("evolution");
+    let sparkle_dir = get_sparkle_dir(None)
+        .map_err(|e| McpError::internal_error(e, None))?;
+    let evolution_dir = sparkle_dir.join("evolution");
 
     if evolution_dir.exists() {
         response.push_str("# Identity Evolution Context\n\n");

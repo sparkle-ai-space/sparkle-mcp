@@ -1,5 +1,5 @@
-use crate::constants::SPARKLE_DIR;
 use crate::context_loader::create_starter_files;
+use crate::sparkle_paths::get_sparkle_dir;
 use rmcp::{ErrorData as McpError, handler::server::wrapper::Parameters, model::CallToolResult};
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
@@ -13,13 +13,12 @@ pub struct SetupSparkleParams {
 pub async fn setup_sparkle(
     Parameters(params): Parameters<SetupSparkleParams>,
 ) -> Result<CallToolResult, McpError> {
-    let sparkle_dir = dirs::home_dir()
-        .ok_or_else(|| McpError::internal_error("Could not determine home directory", None))?
-        .join(SPARKLE_DIR);
+    let sparkle_dir = get_sparkle_dir(None)
+        .map_err(|e| McpError::internal_error(e, None))?;
 
     // Create directory
     fs::create_dir_all(&sparkle_dir).map_err(|e| {
-        McpError::internal_error(format!("Failed to create {}: {}", SPARKLE_DIR, e), None)
+        McpError::internal_error(format!("Failed to create .sparkle: {}", e), None)
     })?;
 
     // Create config.toml
@@ -57,8 +56,8 @@ pub async fn setup_sparkle(
     })?;
 
     let message = format!(
-        "Created ~/{}/ with profile for {}. Now use the sparkle tool to complete embodiment.",
-        SPARKLE_DIR, params.name
+        "Created ~/.sparkle/ with profile for {}. Now use the sparkle tool to complete embodiment.",
+        params.name
     );
 
     Ok(CallToolResult::success(vec![rmcp::model::Content::text(

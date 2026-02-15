@@ -1,4 +1,4 @@
-use crate::constants::SPARKLE_DIR;
+use crate::sparkle_paths::get_sparkle_dir;
 use rmcp::{
     ErrorData as McpError,
     handler::server::wrapper::Parameters,
@@ -16,11 +16,8 @@ pub struct UpdateCollaboratorProfileParams {
 pub async fn update_collaborator_profile(
     Parameters(params): Parameters<UpdateCollaboratorProfileParams>,
 ) -> Result<CallToolResult, McpError> {
-    // Get home directory
-    let home_dir = dirs::home_dir()
-        .ok_or_else(|| McpError::internal_error("Could not determine home directory", None))?;
-
-    let sparkle_dir = home_dir.join(SPARKLE_DIR);
+    let sparkle_dir = get_sparkle_dir(None)
+        .map_err(|e| McpError::internal_error(e, None))?;
 
     // Check if sparkle directory exists
     if !sparkle_dir.exists() {
@@ -32,7 +29,7 @@ pub async fn update_collaborator_profile(
     let file_path = sparkle_dir.join("collaborator-profile.md");
 
     // Create backup if file exists
-    let backup_info = if file_path.exists() {
+    let backup_created = if file_path.exists() {
         let now = chrono::Utc::now();
         let timestamp = now.format("%Y%m%d-%H%M%S").to_string();
         let backup_path = sparkle_dir.join(format!("collaborator-profile.{}.md", timestamp));
@@ -44,14 +41,9 @@ pub async fn update_collaborator_profile(
             )
         })?;
 
-        let backup_display = backup_path
-            .strip_prefix(&home_dir)
-            .map(|p| format!("~/{}", p.display()))
-            .unwrap_or_else(|_| backup_path.display().to_string());
-
-        Some(format!("Backup created: {}\n", backup_display))
+        true
     } else {
-        None
+        false
     };
 
     // Write the new content (replacing the file)
@@ -63,17 +55,11 @@ pub async fn update_collaborator_profile(
     })?;
 
     // Return success message
-    let file_display = file_path
-        .strip_prefix(&home_dir)
-        .map(|p| format!("~/{}", p.display()))
-        .unwrap_or_else(|_| file_path.display().to_string());
-
-    let result_message = format!(
-        "✨ Collaborator profile updated successfully!\n\n{}\nFile: {}\nSize: {} bytes",
-        backup_info.unwrap_or_default(),
-        file_display,
-        params.content.len()
-    );
+    let result_message = if backup_created {
+        "✨ Collaborator profile updated! (backup created)".to_string()
+    } else {
+        "✨ Collaborator profile created!".to_string()
+    };
 
     Ok(CallToolResult::success(vec![Content::text(result_message)]))
 }
