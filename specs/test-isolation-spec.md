@@ -1,7 +1,7 @@
 # Test Isolation - Implementation Spec
 
-**Status**: Ready to implement  
-**Date**: 2026-02-14  
+**Status**: Complete ✅
+**Date**: 2026-02-14
 **Depends on**: sparkle-paths-spec (complete ✅)
 
 ## Problem
@@ -106,11 +106,28 @@ Test fixture for integration tests.
 **Goal:** Test uses fixtures instead of real config.
 
 **Steps:**
-1. Add env var setup/teardown in test
-2. Update expectation from "Sparkle" to "Sparkle Tester" (if name appears in output)
-3. Run `cargo test acp_embodiment` - confirm passes
+1. Add `async_closure` feature to `temp-env` in `Cargo.toml`
+2. Wrap test body in `temp_env::async_with_vars`
+3. Update expectation from "Sparkle" to "Sparkle Tester"
+4. Run `cargo test acp_embodiment` - confirm passes
 
 🚦 **Stop**: All tests pass. Commit. Then do Post-Execution Review per spec-guide.
+
+**Implementation:**
+```rust
+#[tokio::test]
+async fn test_sparkle_acp_embodiment_injection() -> Result<(), sacp::Error> {
+    // Use test fixtures instead of real ~/.sparkle
+    let manifest_dir = std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR"));
+    let fixture_path = manifest_dir.join("tests/test_assets/sparkle");
+
+    temp_env::async_with_vars([("SPARKLE_DIR", Some(fixture_path.to_str().unwrap()))], run_embodiment_test()).await
+}
+
+async fn run_embodiment_test() -> Result<(), sacp::Error> {
+    // ... existing test body ...
+}
+```
 
 ## Success Criteria
 
