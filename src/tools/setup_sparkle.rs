@@ -13,7 +13,7 @@ pub struct SetupSparkleParams {
 pub async fn setup_sparkle(
     Parameters(params): Parameters<SetupSparkleParams>,
 ) -> Result<CallToolResult, McpError> {
-    let sparkle_dir = get_sparkle_dir(None)
+    let sparkle_dir = get_sparkle_dir()
         .map_err(|e| McpError::internal_error(e, None))?;
 
     // Create directory

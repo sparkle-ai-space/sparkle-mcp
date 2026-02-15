@@ -82,6 +82,14 @@ async fn recv<R: sacp::JrResponsePayload + Send>(
 
 #[tokio::test]
 async fn test_sparkle_acp_embodiment_injection() -> Result<(), sacp::Error> {
+    // Use test fixtures instead of real ~/.sparkle
+    let manifest_dir = std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR"));
+    let fixture_path = manifest_dir.join("tests/test_assets/sparkle");
+
+    temp_env::async_with_vars([("SPARKLE_DIR", Some(fixture_path.to_str().unwrap()))], run_embodiment_test()).await
+}
+
+async fn run_embodiment_test() -> Result<(), sacp::Error> {
     // Initialize tracing for test debugging
     let _ = tracing_subscriber::fmt()
         .with_env_filter("info")
@@ -191,7 +199,7 @@ async fn test_sparkle_acp_embodiment_injection() -> Result<(), sacp::Error> {
     // Note: No "Embodying Sparkle" notification since embodiment happens proactively
     expect![[r#"
         [
-            "How long have you been Sparkle?",
+            "How long have you been Sparkle Tester?",
             "Hi there. What brings you here today?",
         ]
     "#]]

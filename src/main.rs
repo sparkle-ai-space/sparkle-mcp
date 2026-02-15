@@ -38,7 +38,7 @@ async fn main() -> anyhow::Result<()> {
 
     if debug_mode {
         // Create log file in ~/.sparkle/ directory
-        let sparkle_dir = sparkle_paths::get_sparkle_dir(None)
+        let sparkle_dir = sparkle_paths::get_sparkle_dir()
             .map_err(|e| anyhow::anyhow!(e))?;
         std::fs::create_dir_all(&sparkle_dir)?;
 

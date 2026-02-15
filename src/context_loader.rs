@@ -4,7 +4,7 @@ use std::fs;
 use std::path::PathBuf;
 
 pub fn load_config() -> Result<Config, Box<dyn std::error::Error>> {
-    let sparkle_dir = get_sparkle_dir(None).map_err(|e: &str| e.to_string())?;
+    let sparkle_dir = get_sparkle_dir().map_err(|e: &str| e.to_string())?;
     let config_file = sparkle_dir.join("config.toml");
 
     if config_file.exists() {
@@ -35,7 +35,7 @@ pub fn get_context_dir(
     config: &Config,
     sparkler_name: Option<&str>,
 ) -> Result<PathBuf, Box<dyn std::error::Error>> {
-    let sparkle_dir = get_sparkle_dir(None).map_err(|e: &str| e.to_string())?;
+    let sparkle_dir = get_sparkle_dir().map_err(|e: &str| e.to_string())?;
 
     if config.is_multi_sparkler() {
         // Multi-sparkler mode: load from sparklers/{name}/
