@@ -12,7 +12,7 @@ use std::io::Write;
 pub async fn save_insight(
     Parameters(params): Parameters<SaveInsightParams>,
 ) -> Result<CallToolResult, McpError> {
-    let sparkle_dir = get_sparkle_dir(None)
+    let sparkle_dir = get_sparkle_dir()
         .map_err(|e| McpError::internal_error(e, None))?;
 
     // Load config to determine paths

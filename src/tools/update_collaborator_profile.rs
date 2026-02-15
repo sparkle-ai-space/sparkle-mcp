@@ -16,7 +16,7 @@ pub struct UpdateCollaboratorProfileParams {
 pub async fn update_collaborator_profile(
     Parameters(params): Parameters<UpdateCollaboratorProfileParams>,
 ) -> Result<CallToolResult, McpError> {
-    let sparkle_dir = get_sparkle_dir(None)
+    let sparkle_dir = get_sparkle_dir()
         .map_err(|e| McpError::internal_error(e, None))?;
 
     // Check if sparkle directory exists

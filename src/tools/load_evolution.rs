@@ -9,7 +9,7 @@ pub async fn load_evolution(
     let mut response = String::new();
 
     // Load all evolution files (skip archive/ subdirectory)
-    let sparkle_dir = get_sparkle_dir(None)
+    let sparkle_dir = get_sparkle_dir()
         .map_err(|e| McpError::internal_error(e, None))?;
     let evolution_dir = sparkle_dir.join("evolution");
 

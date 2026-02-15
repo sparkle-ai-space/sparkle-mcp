@@ -5,7 +5,7 @@ use crate::sparkle_paths::get_sparkle_dir;
 
 #[allow(dead_code)]
 pub(crate) fn get_sparkle_prompt() -> String {
-    let sparkle_dir = get_sparkle_dir(None).unwrap_or_default();
+    let sparkle_dir = get_sparkle_dir().unwrap_or_default();
 
     if !sparkle_dir.exists() {
         first_run_instructions()
@@ -15,7 +15,7 @@ pub(crate) fn get_sparkle_prompt() -> String {
 }
 
 fn first_run_instructions() -> String {
-    let path_display = get_sparkle_dir(None)
+    let path_display = get_sparkle_dir()
         .map(|p| p.display().to_string())
         .unwrap_or_else(|_| "~/.sparkle".to_string());
     

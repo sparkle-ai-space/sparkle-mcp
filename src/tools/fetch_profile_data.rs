@@ -81,7 +81,7 @@ pub async fn fetch_profile_data(params: FetchProfileDataParams) -> Result<FetchR
         .unwrap_or_else(|| "the user".to_string());
 
     // Read existing profile
-    let profile_content = crate::sparkle_paths::get_sparkle_dir(None)
+    let profile_content = crate::sparkle_paths::get_sparkle_dir()
         .ok()
         .and_then(|sparkle_dir| {
             let profile_path = sparkle_dir.join("collaborator-profile.md");

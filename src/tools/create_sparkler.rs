@@ -28,7 +28,7 @@ pub async fn create_sparkler(
     let mut config = load_config()
         .map_err(|e| McpError::internal_error(format!("Failed to load config: {}", e), None))?;
 
-    let sparkle_dir = get_sparkle_dir(None)
+    let sparkle_dir = get_sparkle_dir()
         .map_err(|e| McpError::internal_error(e, None))?;
     let sparklers_dir = sparkle_dir.join("sparklers");
 
