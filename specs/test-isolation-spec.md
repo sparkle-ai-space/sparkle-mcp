@@ -36,7 +36,7 @@ pub fn get_sparkle_dir() -> Result<PathBuf, &'static str>
 **Goal:** `get_sparkle_dir()` checks `SPARKLE_DIR` env var first.
 
 **Steps:**
-1. Add `serial_test` dev dependency to `Cargo.toml`
+1. Add `temp_env` dev dependency to `Cargo.toml`
 2. Add env var check to `get_sparkle_dir`
 3. Replace tests with new tests below
 4. Run `cargo test sparkle` - confirm tests pass
@@ -56,23 +56,20 @@ pub fn get_sparkle_dir() -> Result<PathBuf, &'static str> {
 
 **Tests:**
 ```rust
-use serial_test::serial;
-
 #[test]
-#[serial]
 fn test_get_sparkle_dir_default() {
-    std::env::remove_var("SPARKLE_DIR");
-    let result = get_sparkle_dir().unwrap();
-    assert!(result.ends_with(".sparkle"));
+    temp_env::with_var_unset("SPARKLE_DIR", || {
+        let result = get_sparkle_dir().unwrap();
+        assert!(result.ends_with(".sparkle"));
+    });
 }
 
 #[test]
-#[serial]
 fn test_get_sparkle_dir_from_env() {
-    std::env::set_var("SPARKLE_DIR", "/custom/sparkle");
-    let result = get_sparkle_dir().unwrap();
-    assert_eq!(result, PathBuf::from("/custom/sparkle"));
-    std::env::remove_var("SPARKLE_DIR");
+    temp_env::with_var("SPARKLE_DIR", Some("/custom/sparkle"), || {
+        let result = get_sparkle_dir().unwrap();
+        assert_eq!(result, PathBuf::from("/custom/sparkle"));
+    });
 }
 ```
 
