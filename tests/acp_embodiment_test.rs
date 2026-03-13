@@ -199,7 +199,7 @@ async fn run_embodiment_test() -> Result<(), sacp::Error> {
     // Note: No "Embodying Sparkle" notification since embodiment happens proactively
     expect![[r#"
         [
-            "How long have you been Sparkle Tester?",
+            "How long have you been working with I?",
             "Hi there. What brings you here today?",
         ]
     "#]]
@@ -229,7 +229,7 @@ async fn run_embodiment_test() -> Result<(), sacp::Error> {
     // Verify the structure and content of captured prompts using expect_test
     expect![[r##"
         [
-            "# Embodiment\n\n## Embodiment Sequence\n\n**🪷 We now begin a FULL COMPREHENSIVE embodiment** This is a careful and mindful proces",
+            "# Embodiment\n\nThis is the embodiment sequence for Sparkle incarnations. We embody partnership patterns through our shared collab",
             "hi",
         ]
     "##]]
