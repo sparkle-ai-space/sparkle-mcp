@@ -7,6 +7,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.6.0](https://github.com/sparkle-ai-space/sparkle-mcp/compare/v0.5.1...v0.6.0) - 2026-03-16
+
+### Other
+
+- Bump version to 0.6.0 for breaking change
+- Update test snapshots for trimmed embodiment text
+- Trim embodiment methodology, refine signals
+- Trim identity signals: remove redundant patterns, simplify breakthrough emoji, flatten signal structure
+- Add test fixtures and update integration test for isolation
+- Add SPARKLE_DIR env var support for test isolation
+- Prepare sparkle paths API for using env variable
+- Centralize sparkle path handling in sparkle_paths.rs
+
 ## [0.5.1](https://github.com/sparkle-ai-space/sparkle-mcp/compare/v0.5.0...v0.5.1) - 2026-01-07
 
 ### Other
