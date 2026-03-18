@@ -3,7 +3,7 @@
 //! This module provides the Component trait implementation that allows Sparkle
 //! to run as an ACP proxy, automatically injecting embodiment on the first prompt.
 
-use crate::auto_checkpoint::build_auto_checkpoint_prompt;
+use crate::auto_checkpoint::{build_auto_checkpoint_prompt, build_mid_session_checkpoint_prompt};
 use crate::database::ExchangeDb;
 use crate::embodiment::generate_embodiment_content;
 use crate::server::SparkleServer;
@@ -127,6 +127,25 @@ impl ResponseBuffer {
     }
 }
 
+/// Counts user prompts per session for mid-session checkpoint triggering.
+#[derive(Clone, Default)]
+struct PromptCounter {
+    counts: Arc<Mutex<HashMap<SessionId, usize>>>,
+}
+
+impl PromptCounter {
+    fn increment(&self, session_id: &SessionId) -> usize {
+        let mut map = self.counts.lock().expect("lock not poisoned");
+        let count = map.entry(session_id.clone()).or_default();
+        *count += 1;
+        *count
+    }
+
+    fn reset(&self, session_id: &SessionId) {
+        self.counts.lock().expect("lock not poisoned").insert(session_id.clone(), 0);
+    }
+}
+
 /// Sparkle ACP Component that provides embodiment + MCP tools via proxy
 pub struct SparkleComponent {
     /// Optional sparkler name for multi-sparkler setups
@@ -167,6 +186,12 @@ impl Component<ProxyToConductor> for SparkleComponent {
 
         // Buffer streamed agent response chunks
         let response_buffer = ResponseBuffer::default();
+
+        // Count user prompts per session for mid-session checkpointing
+        let prompt_counter = PromptCounter::default();
+
+        // Mid-session checkpoint threshold (user messages)
+        const MID_SESSION_CHECKPOINT_THRESHOLD: usize = 20;
 
         // Build the proxy handler chain
         ProxyToConductor::builder()
@@ -318,6 +343,7 @@ impl Component<ProxyToConductor> for SparkleComponent {
                 let pending_embodiments = pending_embodiments.clone();
                 let session_dbs = session_dbs.clone();
                 let response_buffer = response_buffer.clone();
+                let prompt_counter = prompt_counter.clone();
                 async move |request: PromptRequest, request_cx, connection_cx| {
                     let session_id = request.session_id.clone();
 
@@ -353,11 +379,45 @@ impl Component<ProxyToConductor> for SparkleComponent {
                     connection_cx.spawn({
                         let connection_cx = connection_cx.clone();
                         let pending_embodiments = pending_embodiments.clone();
+                        let session_dbs = session_dbs.clone();
+                        let prompt_counter = prompt_counter.clone();
+                        let user_prompt_count = prompt_counter.increment(&session_id);
                         async move {
                             // Wait for embodiment to complete if it's in progress
                             pending_embodiments.await_embodiment(&session_id).await;
 
-                            tracing::info!(?session_id, "Embodiment check passed, forwarding prompt");
+                            // Check if mid-session checkpoint is needed
+                            if user_prompt_count > 0 && user_prompt_count % MID_SESSION_CHECKPOINT_THRESHOLD == 0 {
+                                if let Some(db) = session_dbs.get(&session_id) {
+                                    if let Some(prompt) = build_mid_session_checkpoint_prompt(&db, 0) {
+                                        tracing::info!(?session_id, user_prompt_count, "Injecting mid-session checkpoint");
+                                        let result = connection_cx
+                                            .send_request_to(AgentPeer, PromptRequest::new(
+                                                session_id.clone(),
+                                                vec![prompt.into()],
+                                            ))
+                                            .block_task()
+                                            .await;
+                                        match &result {
+                                            Ok(PromptResponse { stop_reason: StopReason::EndTurn, .. }) => {
+                                                tracing::info!(?session_id, "Mid-session checkpoint completed");
+                                                if let Err(e) = db.mark_all_checkpointed() {
+                                                    tracing::warn!(?e, "Failed to mark exchanges as checkpointed");
+                                                }
+                                                prompt_counter.reset(&session_id);
+                                            }
+                                            Ok(PromptResponse { stop_reason, .. }) => {
+                                                tracing::warn!(?session_id, ?stop_reason, "Mid-session checkpoint ended abnormally");
+                                            }
+                                            Err(e) => {
+                                                tracing::warn!(?session_id, ?e, "Mid-session checkpoint failed");
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+
+                            tracing::info!(?session_id, "Forwarding prompt");
 
                             // Forward the prompt request
                             connection_cx
