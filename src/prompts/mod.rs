@@ -1,4 +1,6 @@
+pub mod auto_checkpoint;
 pub mod checkpoint;
+pub mod mid_session_checkpoint;
 pub mod embodiment_test;
 pub mod enrich_profile;
 pub mod presence_check;

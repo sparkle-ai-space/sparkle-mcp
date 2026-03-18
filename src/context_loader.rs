@@ -144,7 +144,7 @@ pub fn get_workspace_dir(
     workspace_path: &str,
     sparkler_name: Option<&str>,
 ) -> Result<PathBuf, Box<dyn std::error::Error>> {
-    let workspace_base = std::path::Path::new(workspace_path).join(".sparkle-space");
+    let workspace_base = crate::sparkle_paths::get_sparkle_space_dir(std::path::Path::new(workspace_path));
 
     if config.is_multi_sparkler() {
         // Multi-sparkler mode: use sparkler-specific subdirectory

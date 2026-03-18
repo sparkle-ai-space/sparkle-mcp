@@ -6,6 +6,7 @@
 use std::path::PathBuf;
 
 const SPARKLE_DIR: &str = ".sparkle";
+const SPARKLE_SPACE_DIR: &str = ".sparkle-space";
 
 /// Get the sparkle directory path.
 ///
@@ -16,6 +17,11 @@ pub fn get_sparkle_dir() -> Result<PathBuf, &'static str> {
     }
     let home = dirs::home_dir().ok_or("Could not determine home directory")?;
     Ok(home.join(SPARKLE_DIR))
+}
+
+/// Get the workspace-local `.sparkle-space/` directory for a given workspace path.
+pub fn get_sparkle_space_dir(workspace_path: &std::path::Path) -> PathBuf {
+    workspace_path.join(SPARKLE_SPACE_DIR)
 }
 
 #[cfg(test)]

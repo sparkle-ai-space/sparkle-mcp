@@ -1,8 +1,11 @@
 pub mod acp_component;
+pub mod auto_checkpoint;
 pub mod context_loader;
+pub mod database;
 pub mod embodiment;
 pub mod prompts;
 pub mod server;
+pub mod session_state;
 pub mod sparkle_loader;
 pub mod sparkle_paths;
 pub mod tools;

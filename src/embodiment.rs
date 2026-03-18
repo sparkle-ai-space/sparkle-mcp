@@ -112,7 +112,7 @@ pub fn generate_embodiment_content(params: FullEmbodimentParams) -> Result<Strin
     // Step 7: Workspace-Specific Context
     if let Some(workspace_path) = workspace_path {
         // Workspace is shared across all Sparklers
-        let workspace_sparkle_space = workspace_path.join(".sparkle-space");
+        let workspace_sparkle_space = crate::sparkle_paths::get_sparkle_space_dir(&workspace_path);
 
         if workspace_sparkle_space.exists() {
             response.push_str("# Workspace Context\n\n");
