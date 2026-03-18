@@ -1,3 +1,4 @@
+pub mod auto_checkpoint;
 pub mod checkpoint;
 pub mod embodiment_test;
 pub mod enrich_profile;

@@ -1,4 +1,5 @@
 pub mod acp_component;
+pub mod auto_checkpoint;
 pub mod context_loader;
 pub mod database;
 pub mod embodiment;

@@ -5,6 +5,7 @@ use std::fs::OpenOptions;
 use tracing_subscriber::{self, EnvFilter, fmt::writer::MakeWriterExt};
 
 mod acp_component;
+mod auto_checkpoint;
 mod context_loader;
 mod database;
 mod embodiment;

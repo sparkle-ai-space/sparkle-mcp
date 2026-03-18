@@ -3,6 +3,7 @@
 //! This module provides the Component trait implementation that allows Sparkle
 //! to run as an ACP proxy, automatically injecting embodiment on the first prompt.
 
+use crate::auto_checkpoint::build_auto_checkpoint_prompt;
 use crate::database::ExchangeDb;
 use crate::embodiment::generate_embodiment_content;
 use crate::server::SparkleServer;
@@ -247,9 +248,46 @@ impl Component<ProxyToConductor> for SparkleComponent {
                                             ?session_id,
                                             "Embodiment completed successfully"
                                         );
-                                        pending_embodiments
-                                            .signal_embodiment_completed(&session_id);
-                                        Ok(())
+
+                                        // Check for uncheckpointed exchanges from previous session
+                                        let auto_checkpoint: Option<(Arc<ExchangeDb>, String)> = session_dbs
+                                            .get(&session_id)
+                                            .and_then(|db| {
+                                                build_auto_checkpoint_prompt(&db)
+                                                    .map(|prompt| (db, prompt))
+                                            });
+
+                                        if let Some((db, prompt)) = auto_checkpoint {
+                                            let pending = pending_embodiments.clone();
+                                            let sid = session_id.clone();
+                                            connection_cx
+                                                .send_request_to(AgentPeer, PromptRequest::new(
+                                                    session_id.clone(),
+                                                    vec![prompt.into()],
+                                                ))
+                                                .on_receiving_result(async move |result| {
+                                                    match &result {
+                                                        Ok(PromptResponse { stop_reason: StopReason::EndTurn, .. }) => {
+                                                            tracing::info!(?sid, "Auto-checkpoint completed");
+                                                            if let Err(e) = db.mark_all_checkpointed() {
+                                                                tracing::warn!(?e, "Failed to mark exchanges as checkpointed");
+                                                            }
+                                                        }
+                                                        Ok(PromptResponse { stop_reason, .. }) => {
+                                                            tracing::warn!(?sid, ?stop_reason, "Auto-checkpoint ended abnormally");
+                                                        }
+                                                        Err(e) => {
+                                                            tracing::warn!(?sid, ?e, "Auto-checkpoint failed, will retry next session");
+                                                        }
+                                                    }
+                                                    pending.signal_embodiment_completed(&sid);
+                                                    Ok(())
+                                                })
+                                        } else {
+                                            pending_embodiments
+                                                .signal_embodiment_completed(&session_id);
+                                            Ok(())
+                                        }
                                     }
                                     Ok(PromptResponse {
                                         stop_reason,
