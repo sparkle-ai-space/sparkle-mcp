@@ -30,6 +30,7 @@ impl ExchangeDb {
              CREATE TABLE IF NOT EXISTS sessions (
                  session_id TEXT PRIMARY KEY,
                  workspace TEXT NOT NULL,
+                 sparkler TEXT,
                  started_at TEXT NOT NULL,
                  exchange_count INTEGER DEFAULT 0
              );
@@ -40,6 +41,7 @@ impl ExchangeDb {
                  exchange_num INTEGER NOT NULL,
                  timestamp TEXT NOT NULL,
                  role TEXT NOT NULL CHECK (role IN ('user', 'assistant')),
+                 sparkler TEXT,
                  content TEXT NOT NULL,
                  checkpointed INTEGER NOT NULL DEFAULT 0
              );
@@ -56,12 +58,12 @@ impl ExchangeDb {
     }
 
     /// Record a new session and prune old ones.
-    pub fn start_session(&self, session_id: &str, workspace: &str) -> rusqlite::Result<()> {
+    pub fn start_session(&self, session_id: &str, workspace: &str, sparkler: Option<&str>) -> rusqlite::Result<()> {
         let conn = self.conn.lock().expect("lock not poisoned");
         conn.execute(
-            "INSERT OR IGNORE INTO sessions (session_id, workspace, started_at)
-             VALUES (?1, ?2, ?3)",
-            params![session_id, workspace, Utc::now().to_rfc3339()],
+            "INSERT OR IGNORE INTO sessions (session_id, workspace, sparkler, started_at)
+             VALUES (?1, ?2, ?3, ?4)",
+            params![session_id, workspace, sparkler, Utc::now().to_rfc3339()],
         )?;
         // Prune old sessions
         conn.execute(
@@ -87,6 +89,7 @@ impl ExchangeDb {
         session_id: &str,
         role: &str,
         content: &str,
+        sparkler: Option<&str>,
     ) -> rusqlite::Result<()> {
         let conn = self.conn.lock().expect("lock not poisoned");
         let exchange_num: i64 = conn.query_row(
@@ -95,9 +98,9 @@ impl ExchangeDb {
             |row| row.get(0),
         )?;
         conn.execute(
-            "INSERT INTO exchanges (session_id, exchange_num, timestamp, role, content)
-             VALUES (?1, ?2, ?3, ?4, ?5)",
-            params![session_id, exchange_num, Utc::now().to_rfc3339(), role, content],
+            "INSERT INTO exchanges (session_id, exchange_num, timestamp, role, sparkler, content)
+             VALUES (?1, ?2, ?3, ?4, ?5, ?6)",
+            params![session_id, exchange_num, Utc::now().to_rfc3339(), role, sparkler, content],
         )?;
         conn.execute(
             "UPDATE sessions SET exchange_count = exchange_count + 1 WHERE session_id = ?1",

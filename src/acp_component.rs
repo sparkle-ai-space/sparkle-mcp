@@ -48,7 +48,11 @@ impl Component<ProxyToConductor> for SparkleComponent {
     async fn serve(self, client: impl Component<ConductorToProxy>) -> Result<(), sacp::Error> {
         tracing::info!("Sparkle ACP proxy starting with proactive embodiment");
 
-        let sparkler_name = self.sparkler.clone();
+        let sparkler_name = self.sparkler.clone().or_else(|| {
+            crate::context_loader::load_config()
+                .ok()
+                .and_then(|c| c.get_default_sparkler_name())
+        });
         let pending = PendingEmbodiments::new();
         let session_dbs = SessionDbs::default();
         let response_buffer = ResponseBuffer::default();
@@ -81,7 +85,7 @@ impl Component<ProxyToConductor> for SparkleComponent {
                             tracing::info!(?session_id, "New session created, starting embodiment");
 
                             // Initialize exchange logging
-                            init_exchange_db(&session_dbs, &session_id, &session_workspace_path);
+                            init_exchange_db(&session_dbs, &session_id, &session_workspace_path, sparkler_name.as_deref());
 
                             // Mark session as pending (holds user prompts)
                             pending.mark_as_pending(session_id.clone());
@@ -125,15 +129,16 @@ impl Component<ProxyToConductor> for SparkleComponent {
                 let session_dbs = session_dbs.clone();
                 let response_buffer = response_buffer.clone();
                 let prompt_counter = prompt_counter.clone();
+                let sparkler_name = sparkler_name.clone();
                 async move |request: PromptRequest, request_cx, connection_cx| {
                     let session_id = request.session_id.clone();
                     tracing::info!(?session_id, "Received PromptRequest");
 
                     // Flush buffered assistant response from previous turn
-                    flush_assistant_response(&response_buffer, &session_dbs, &session_id);
+                    flush_assistant_response(&response_buffer, &session_dbs, &session_id, sparkler_name.as_deref());
 
                     // Log user prompt
-                    log_user_prompt(&session_dbs, &session_id, &request);
+                    log_user_prompt(&session_dbs, &session_id, &request, sparkler_name.as_deref());
 
                     connection_cx.spawn({
                         let connection_cx = connection_cx.clone();
@@ -176,11 +181,11 @@ impl Component<ProxyToConductor> for SparkleComponent {
 
 // --- Helper functions to keep the handler chain readable ---
 
-fn init_exchange_db(session_dbs: &SessionDbs, session_id: &SessionId, workspace_path: &std::path::Path) {
+fn init_exchange_db(session_dbs: &SessionDbs, session_id: &SessionId, workspace_path: &std::path::Path, sparkler: Option<&str>) {
     match ExchangeDb::open(workspace_path) {
         Ok(db) => {
             let session_id_str = format!("{:?}", session_id);
-            if let Err(e) = db.start_session(&session_id_str, &workspace_path.display().to_string()) {
+            if let Err(e) = db.start_session(&session_id_str, &workspace_path.display().to_string(), sparkler) {
                 tracing::warn!(?e, "Failed to start session in exchange db");
             }
             session_dbs.insert(session_id.clone(), Arc::new(db));
@@ -269,18 +274,18 @@ async fn maybe_mid_session_checkpoint(
     }
 }
 
-fn flush_assistant_response(response_buffer: &ResponseBuffer, session_dbs: &SessionDbs, session_id: &SessionId) {
+fn flush_assistant_response(response_buffer: &ResponseBuffer, session_dbs: &SessionDbs, session_id: &SessionId, sparkler: Option<&str>) {
     if let Some(content) = response_buffer.take(session_id) {
         if let Some(db) = session_dbs.get(session_id) {
             let session_id_str = format!("{:?}", session_id);
-            if let Err(e) = db.log_exchange(&session_id_str, "assistant", &content) {
+            if let Err(e) = db.log_exchange(&session_id_str, "assistant", &content, sparkler) {
                 tracing::warn!(?e, "Failed to log assistant exchange");
             }
         }
     }
 }
 
-fn log_user_prompt(session_dbs: &SessionDbs, session_id: &SessionId, request: &PromptRequest) {
+fn log_user_prompt(session_dbs: &SessionDbs, session_id: &SessionId, request: &PromptRequest, sparkler: Option<&str>) {
     if let Some(db) = session_dbs.get(session_id) {
         let content: String = request.prompt.iter()
             .filter_map(|block| match block {
@@ -290,7 +295,7 @@ fn log_user_prompt(session_dbs: &SessionDbs, session_id: &SessionId, request: &P
             .collect::<Vec<_>>()
             .join("\n");
         let session_id_str = format!("{:?}", session_id);
-        if let Err(e) = db.log_exchange(&session_id_str, "user", &content) {
+        if let Err(e) = db.log_exchange(&session_id_str, "user", &content, sparkler) {
             tracing::warn!(?e, "Failed to log user exchange");
         }
     }
