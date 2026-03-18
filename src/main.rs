@@ -11,6 +11,7 @@ mod database;
 mod embodiment;
 mod prompts;
 mod server;
+mod session_state;
 mod sparkle_loader;
 mod sparkle_paths;
 mod tools;

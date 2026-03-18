@@ -110,18 +110,16 @@ impl ExchangeDb {
     pub fn get_uncheckpointed_exchanges(&self) -> rusqlite::Result<Vec<Exchange>> {
         let conn = self.conn.lock().expect("lock not poisoned");
         let mut stmt = conn.prepare(
-            "SELECT session_id, exchange_num, timestamp, role, content
+            "SELECT timestamp, role, content
              FROM exchanges WHERE checkpointed = 0
              ORDER BY timestamp ASC",
         )?;
         let rows = stmt
             .query_map([], |row| {
                 Ok(Exchange {
-                    session_id: row.get(0)?,
-                    exchange_num: row.get(1)?,
-                    timestamp: row.get(2)?,
-                    role: row.get(3)?,
-                    content: row.get(4)?,
+                    timestamp: row.get(0)?,
+                    role: row.get(1)?,
+                    content: row.get(2)?,
                 })
             })?
             .collect::<rusqlite::Result<Vec<_>>>()?;
@@ -137,8 +135,6 @@ impl ExchangeDb {
 
 /// A single exchange record.
 pub struct Exchange {
-    pub session_id: String,
-    pub exchange_num: i64,
     pub timestamp: String,
     pub role: String,
     pub content: String,
