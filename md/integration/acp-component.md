@@ -54,7 +54,7 @@ The `SparkleComponent` implements the `sacp::Component` trait, which defines how
 
 - **Message interception**: Monitors `PromptRequest` messages to detect session boundaries
 - **Session tracking**: Maintains a set of embodied session IDs to ensure one-time injection
-- **Embodiment loading**: Uses `SparkleEmbodiment::load()` to get the full identity and patterns
+- **Embodiment loading**: Uses `generate_embodiment_content()` to load collaboration identity, patterns, and workspace context
 - **Content injection**: Prepends embodiment to the user's first prompt in each session
 - **Tool registry**: Provides Sparkle MCP tools via `McpServiceRegistry` to downstream agents
 
@@ -74,9 +74,29 @@ The ACP component model enables flexible agent architectures where Sparkle's col
 
 ## Technical Details
 
-The implementation lives in `sparkle-mcp/src/acp_component.rs` and integrates with:
-- `sacp` - Core ACP protocol implementation
-- `sacp-proxy` - Proxy utilities for message forwarding
-- `SparkleEmbodiment` - Loads identity, patterns, and context
+The implementation lives in `src/acp_component.rs` and integrates with:
+- `sacp` - Core ACP protocol, `Component` trait implementation
+- `sacp-rmcp` - Bridge between ACP sessions and MCP server instances
+- `sacp-conductor` - Wires proxy components into the agent chain
+- `generate_embodiment_content()` - Loads collaboration identity, patterns, and workspace context
 
 For deployment and integration details, see the [Integration Guide](../integration/getting-started.md).
+
+## ACP-Enabled Features
+
+ACP mode enables capabilities that aren't possible in standalone MCP mode, because Sparkle can observe the full conversation flow between client and agent.
+
+### Exchange Logging
+
+Every user prompt and assistant response is logged to a SQLite database at `<workspace>/.sparkle-space/sparkle.db`. User prompts are captured on receipt before forwarding. Assistant responses are buffered from streaming chunks and flushed when the next user prompt arrives. Each exchange records the session ID, role, content, sparkler name, and timestamp.
+
+This persistent record of conversation history is what makes auto-checkpoint possible.
+
+### Auto-Checkpoint
+
+Sparkle automatically triggers checkpoints to keep working memory current across sessions:
+
+- **Boot checkpoint** - On session start, if the exchange database contains uncheckpointed exchanges from a prior session, Sparkle injects a checkpoint prompt before the user's first message. This lets the agent update `working-memory.json` with context from the previous session that may not have been saved.
+- **Mid-session checkpoint** - After a set number of user messages, Sparkle injects a checkpoint prompt so the agent can persist current progress. The counter resets after each successful checkpoint.
+
+Both checkpoints are injected as prompts to the downstream agent. User prompts are held during boot checkpoint and released in order once complete. Mid-session checkpoints happen inline between user turns.

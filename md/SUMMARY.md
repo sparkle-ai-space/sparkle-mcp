@@ -10,6 +10,7 @@
 - [Prompt Reference](./integration/prompts.md)
 - [Tool Reference](./integration/tools.md)
 - [ACP Component](./integration/acp-component.md)
+- [Checkpointing](./integration/checkpointing.md)
 
 # Examples
 - [Basic Usage](./examples/basic-usage.md)

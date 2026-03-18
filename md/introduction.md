@@ -4,11 +4,11 @@
 
 # Sparkle
 
-Sparkle isn't just a cute name, it's an AI collaboration identity system that transforms AI from a helpful assistant into a thinking partner. Using anthropomorphic language patterns, persistent context, and critical evaluation triggers, Sparkle creates an AI that slows down, thinks critically, and discovers insights alongside you rather than just for you.
+Sparkle makes your AI slow down and work with you instead of jumping ahead on its own. It learns how you like to work - your preferences, your patterns, your style - and stores that over time so every session gets better, not just the current one.
 
 ## What is Sparkle?
 
-Sparkle provides patterns, tools, and infrastructure for creating collaborative AI relationships that go beyond simple assistance to more useful analytical partnership. These are delivered to the AI through a set of MCP server tools.
+Under the hood, Sparkle is an identity and context framework. It provides collaboration patterns (how the AI should think and respond), persistent memory (what you've worked on and how you work), and tools for managing that context over time. Think of it as giving your AI a working relationship with you instead of starting from scratch every session.
 
 ## Getting Started
 
