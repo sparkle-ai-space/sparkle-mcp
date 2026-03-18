@@ -11,7 +11,7 @@ pub async fn session_checkpoint(
     let timestamp = Utc::now().format("%Y-%m-%d-%H%M%S").to_string();
 
     // Workspace is shared - all Sparklers use .sparkle-space/
-    let sparkle_space = workspace_path.join(".sparkle-space");
+    let sparkle_space = crate::sparkle_paths::get_sparkle_space_dir(workspace_path);
     let checkpoints_dir = sparkle_space.join("checkpoints");
 
     // Ensure directories exist
