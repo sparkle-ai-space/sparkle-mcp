@@ -7,6 +7,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.6.1](https://github.com/sparkle-ai-space/sparkle-mcp/compare/v0.6.0...v0.6.1) - 2026-03-18
+
+### Fixed
+
+- isolate ACP test from local state
+
+### Other
+
+- Add sparkler name to sessions and exchanges tables
+- Refactor ACP: extract session state, simplify auto-checkpoint, clean up
+- Update ACP test snapshot for Eliza response drift
+- Add mid-session periodic auto-checkpoint every 20 user messages
+- Add auto-checkpoint on session load from uncheckpointed exchanges
+- Add SQLite exchange logging for ACP proxy sessions
+- Centralize .sparkle-space path in sparkle_paths
+- release v0.6.0
+
 ## [0.6.0](https://github.com/sparkle-ai-space/sparkle-mcp/compare/v0.5.1...v0.6.0) - 2026-03-16
 
 ### Other
