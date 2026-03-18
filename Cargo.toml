@@ -67,3 +67,4 @@ elizacp = "10.0"
 sacp-conductor = "10.0"
 expect-test = "1.5"
 temp-env = { version = "0.3.6", features = ["async_closure"] }
+tempfile = "3"

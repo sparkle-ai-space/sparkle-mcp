@@ -95,6 +95,11 @@ async fn run_embodiment_test() -> Result<(), sacp::Error> {
         .with_env_filter("info")
         .with_test_writer()
         .try_init();
+
+    // Use a fresh temp workspace so the exchange DB doesn't pick up
+    // uncheckpointed exchanges from CWD's .sparkle-space/
+    let workspace_dir = tempfile::tempdir().unwrap();
+
     // Create channel to collect session notifications
     let (notification_tx, mut notification_rx) = mpsc::unbounded();
 
@@ -148,7 +153,7 @@ async fn run_embodiment_test() -> Result<(), sacp::Error> {
             // Create session
             tracing::info!("Creating new session");
             let session =
-                recv(editor_cx.send_request(NewSessionRequest::new(std::path::PathBuf::new())))
+                recv(editor_cx.send_request(NewSessionRequest::new(workspace_dir.path().to_path_buf())))
                     .await?;
 
             tracing::info!(session_id = %session.session_id.0, "Session created");
@@ -197,9 +202,10 @@ async fn run_embodiment_test() -> Result<(), sacp::Error> {
     // 1. Eliza's deterministic response to the embodiment prompt (sent during NewSessionRequest)
     // 2. Eliza's deterministic response to the user's "hi" prompt
     // Note: No "Embodying Sparkle" notification since embodiment happens proactively
+    // Note: No auto-checkpoint since workspace is a fresh temp dir
     expect![[r#"
         [
-            "Tell me more about your family.",
+            "How long have you been working with I?",
             "Hi there. What brings you here today?",
             "Hello. How are you feeling today?",
         ]

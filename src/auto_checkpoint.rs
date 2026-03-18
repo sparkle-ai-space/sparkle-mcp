@@ -12,7 +12,6 @@ use crate::prompts::mid_session_checkpoint::get_mid_session_checkpoint_prompt;
 /// If uncheckpointed exchanges exist, returns a boot recovery prompt.
 pub fn build_boot_checkpoint_prompt(db: &ExchangeDb) -> Option<String> {
     let exchanges = get_uncheckpointed(db)?;
-    tracing::info!(count = exchanges.len(), "Found uncheckpointed exchanges for boot recovery");
     let human_name = human_name();
     Some(get_auto_checkpoint_prompt(&human_name, &exchanges))
 }
@@ -28,6 +27,7 @@ pub fn build_mid_session_checkpoint_prompt(db: &ExchangeDb) -> Option<String> {
 fn get_uncheckpointed(db: &ExchangeDb) -> Option<String> {
     match db.get_uncheckpointed_exchanges() {
         Ok(ex) if !ex.is_empty() => {
+            tracing::info!(count = ex.len(), "Found uncheckpointed exchanges for boot recovery");
             let mut text = String::new();
             for e in &ex {
                 text.push_str(&format!("[{}] {}: {}\n\n", e.timestamp, e.role, e.content));
