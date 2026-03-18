@@ -6,6 +6,7 @@ use tracing_subscriber::{self, EnvFilter, fmt::writer::MakeWriterExt};
 
 mod acp_component;
 mod context_loader;
+mod database;
 mod embodiment;
 mod prompts;
 mod server;

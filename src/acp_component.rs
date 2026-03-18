@@ -3,6 +3,7 @@
 //! This module provides the Component trait implementation that allows Sparkle
 //! to run as an ACP proxy, automatically injecting embodiment on the first prompt.
 
+use crate::database::ExchangeDb;
 use crate::embodiment::generate_embodiment_content;
 use crate::server::SparkleServer;
 use crate::types::FullEmbodimentParams;
@@ -10,10 +11,10 @@ use anyhow::Result;
 use sacp::component::Component;
 use sacp::link::ConductorToProxy;
 use sacp::mcp_server::McpServer;
-use sacp::schema::{NewSessionRequest, PromptRequest, PromptResponse, SessionId, StopReason};
+use sacp::schema::{ContentBlock, NewSessionRequest, PromptRequest, PromptResponse, SessionId, SessionNotification, SessionUpdate, StopReason};
 use sacp::{AgentPeer, ClientPeer, ProxyToConductor};
 use sacp_rmcp::McpServerExt as _;
-use std::collections::HashSet;
+use std::collections::{HashMap, HashSet};
 use std::sync::{Arc, Mutex};
 use tokio::sync::Notify;
 
@@ -86,6 +87,45 @@ impl PendingEmbodimentRequests {
     }
 }
 
+/// Maps session IDs to their ExchangeDb handles.
+#[derive(Clone, Default)]
+struct SessionDbs {
+    dbs: Arc<Mutex<HashMap<SessionId, Arc<ExchangeDb>>>>,
+}
+
+impl SessionDbs {
+    fn insert(&self, session_id: SessionId, db: Arc<ExchangeDb>) {
+        self.dbs.lock().expect("lock not poisoned").insert(session_id, db);
+    }
+
+    fn get(&self, session_id: &SessionId) -> Option<Arc<ExchangeDb>> {
+        self.dbs.lock().expect("lock not poisoned").get(session_id).cloned()
+    }
+}
+
+/// Buffers streamed agent response chunks per session.
+#[derive(Clone, Default)]
+struct ResponseBuffer {
+    buffers: Arc<Mutex<HashMap<SessionId, String>>>,
+}
+
+impl ResponseBuffer {
+    fn append(&self, session_id: &SessionId, text: &str) {
+        self.buffers
+            .lock()
+            .expect("lock not poisoned")
+            .entry(session_id.clone())
+            .or_default()
+            .push_str(text);
+    }
+
+    fn take(&self, session_id: &SessionId) -> Option<String> {
+        let mut map = self.buffers.lock().expect("lock not poisoned");
+        let content = map.remove(session_id)?;
+        if content.is_empty() { None } else { Some(content) }
+    }
+}
+
 /// Sparkle ACP Component that provides embodiment + MCP tools via proxy
 pub struct SparkleComponent {
     /// Optional sparkler name for multi-sparkler setups
@@ -121,6 +161,12 @@ impl Component<ProxyToConductor> for SparkleComponent {
         // Track sessions that are currently being embodied
         let pending_embodiments = PendingEmbodimentRequests::new();
 
+        // Track exchange databases per session
+        let session_dbs = SessionDbs::default();
+
+        // Buffer streamed agent response chunks
+        let response_buffer = ResponseBuffer::default();
+
         // Build the proxy handler chain
         ProxyToConductor::builder()
             .name("sparkle-proxy")
@@ -128,6 +174,7 @@ impl Component<ProxyToConductor> for SparkleComponent {
             .on_receive_request_from(ClientPeer, {
                 let pending_embodiments = pending_embodiments.clone();
                 let sparkler_name = sparkler_name.clone();
+                let session_dbs = session_dbs.clone();
                 async move |request: NewSessionRequest,
                             request_cx,
                             connection_cx| {
@@ -137,6 +184,7 @@ impl Component<ProxyToConductor> for SparkleComponent {
                     // so that we can move them into the future later
                     let pending_embodiments = pending_embodiments.clone();
                     let sparkler_name = sparkler_name.clone();
+                    let session_dbs = session_dbs.clone();
 
                     let session_workspace_path = request.cwd.clone();
 
@@ -156,6 +204,22 @@ impl Component<ProxyToConductor> for SparkleComponent {
                                 ?session_id,
                                 "New session created, starting embodiment"
                             );
+
+                            // Initialize exchange logging for this session
+                            match ExchangeDb::open(&session_workspace_path) {
+                                Ok(db) => {
+                                    let workspace_str = session_workspace_path.display().to_string();
+                                    let session_id_str = format!("{:?}", session_id);
+                                    if let Err(e) = db.start_session(&session_id_str, &workspace_str) {
+                                        tracing::warn!(?e, "Failed to start session in exchange db");
+                                    }
+                                    session_dbs.insert(session_id.clone(), Arc::new(db));
+                                    tracing::info!(?session_id, "Exchange logging initialized");
+                                }
+                                Err(e) => {
+                                    tracing::warn!(?e, "Failed to open exchange db, continuing without logging");
+                                }
+                            }
 
                             // Mark this session as pending embodiment
                             pending_embodiments.mark_as_pending(session_id.clone());
@@ -211,13 +275,40 @@ impl Component<ProxyToConductor> for SparkleComponent {
                     })
                 }
             }, sacp::on_receive_request!())
-            // When we see a PromptRequest, wait for embodiment if it's pending
+            // When we see a PromptRequest, log it and wait for embodiment if pending
             .on_receive_request_from(ClientPeer, {
                 let pending_embodiments = pending_embodiments.clone();
+                let session_dbs = session_dbs.clone();
+                let response_buffer = response_buffer.clone();
                 async move |request: PromptRequest, request_cx, connection_cx| {
                     let session_id = request.session_id.clone();
 
                     tracing::info!(?session_id, "Received PromptRequest");
+
+                    // Flush any buffered assistant response from the previous turn
+                    if let Some(content) = response_buffer.take(&session_id) {
+                        if let Some(db) = session_dbs.get(&session_id) {
+                            let session_id_str = format!("{:?}", session_id);
+                            if let Err(e) = db.log_exchange(&session_id_str, "assistant", &content) {
+                                tracing::warn!(?e, "Failed to log assistant exchange");
+                            }
+                        }
+                    }
+
+                    // Log user prompt to exchange db
+                    if let Some(db) = session_dbs.get(&session_id) {
+                        let content: String = request.prompt.iter()
+                            .filter_map(|block| match block {
+                                sacp::schema::ContentBlock::Text(t) => Some(t.text.as_str()),
+                                _ => None,
+                            })
+                            .collect::<Vec<_>>()
+                            .join("\n");
+                        let session_id_str = format!("{:?}", session_id);
+                        if let Err(e) = db.log_exchange(&session_id_str, "user", &content) {
+                            tracing::warn!(?e, "Failed to log user exchange");
+                        }
+                    }
 
                     // Spawn a task so that we can await completion of embodiment
                     // without stalling the main request handler.
@@ -233,11 +324,24 @@ impl Component<ProxyToConductor> for SparkleComponent {
                             // Forward the prompt request
                             connection_cx
                                 .send_request_to(AgentPeer, request)
-                            .forward_to_request_cx(request_cx)
+                                .forward_to_request_cx(request_cx)
                         }
                     })
                 }
             }, sacp::on_receive_request!())
+            // Buffer agent response chunks for logging on next turn
+            .on_receive_notification_from(AgentPeer, {
+                let response_buffer = response_buffer.clone();
+                async move |notif: SessionNotification, connection_cx| {
+                    if let SessionUpdate::AgentMessageChunk(chunk) = &notif.update {
+                        if let ContentBlock::Text(t) = &chunk.content {
+                            response_buffer.append(&notif.session_id, &t.text);
+                        }
+                    }
+                    // Return Handled::No so the notification continues to the client
+                    Ok(sacp::Handled::No { message: (notif, connection_cx), retry: false })
+                }
+            }, sacp::on_receive_notification!())
             .serve(client)
             .await
     }
