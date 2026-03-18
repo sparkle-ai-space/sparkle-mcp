@@ -199,8 +199,9 @@ async fn run_embodiment_test() -> Result<(), sacp::Error> {
     // Note: No "Embodying Sparkle" notification since embodiment happens proactively
     expect![[r#"
         [
-            "How long have you been working with I?",
+            "Tell me more about your family.",
             "Hi there. What brings you here today?",
+            "Hello. How are you feeling today?",
         ]
     "#]]
     .assert_debug_eq(&notification_texts);
@@ -227,12 +228,13 @@ async fn run_embodiment_test() -> Result<(), sacp::Error> {
         .collect();
 
     // Verify the structure and content of captured prompts using expect_test
-    expect![[r##"
+    expect![[r###"
         [
             "# Embodiment\n\nThis is the embodiment sequence for Sparkle incarnations. We embody partnership patterns through our shared collab",
+            "## Auto-Checkpoint: Previous Session Recovery\n\nThe previous session ended without a checkpoint. Below is the conversation from t",
             "hi",
         ]
-    "##]]
+    "###]]
     .assert_debug_eq(&prompt_previews);
 
     tracing::info!("✅ Test passed - embodiment injection verified");
