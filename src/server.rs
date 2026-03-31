@@ -1,5 +1,5 @@
 use crate::types::{
-    CheckpointParams, FullEmbodimentParams, LoadEvolutionParams, SaveInsightParams,
+    CheckpointParams, FullEmbodimentParams, LoadEvolutionParams, SaveInsightParams, SparkleMode,
 };
 use rmcp::{
     ErrorData as McpError, RoleServer, ServerHandler,
@@ -22,6 +22,7 @@ pub struct SparkleServer {
     current_sparkler: Arc<RwLock<Option<String>>>,
     /// Workspace path for this session (used by checkpoint tool)
     workspace_path: Arc<PathBuf>,
+    mode: SparkleMode,
 }
 
 #[tool_router]
@@ -29,21 +30,22 @@ pub struct SparkleServer {
 impl SparkleServer {
     /// Create a new SparkleServer for standalone MCP mode (not ACP).
     /// Uses current working directory as workspace path.
-    pub fn new() -> Self {
+    pub fn new(mode: SparkleMode) -> Self {
         let workspace_path = std::env::current_dir().unwrap_or_else(|_| PathBuf::from("."));
-        Self::with_options(workspace_path, false)
+        Self::with_options(workspace_path, false, mode)
     }
 
     /// Create a new SparkleServer for ACP mode with the given workspace path.
     /// In ACP mode, embodiment tool/prompt are removed (handled by proxy).
-    pub fn new_for_acp(workspace_path: PathBuf) -> Self {
-        Self::with_options(workspace_path, true)
+    pub fn new_for_acp(workspace_path: PathBuf, mode: SparkleMode) -> Self {
+        Self::with_options(workspace_path, true, mode)
     }
 
-    fn with_options(workspace_path: PathBuf, acp_mode: bool) -> Self {
+    fn with_options(workspace_path: PathBuf, acp_mode: bool, mode: SparkleMode) -> Self {
         tracing::info!(
             ?workspace_path,
             acp_mode,
+            ?mode,
             "Initializing Sparkle AI Collaboration Identity MCP Server"
         );
 
@@ -57,11 +59,19 @@ impl SparkleServer {
             prompt_router.remove_route("sparkle");
         }
 
+        // In core mode, remove workspace persistence tools and prompts
+        if mode == SparkleMode::Core {
+            tracing::info!("Core mode: removing session_checkpoint tool and checkpoint prompt");
+            tool_router.remove_route("session_checkpoint");
+            prompt_router.remove_route("checkpoint");
+        }
+
         Self {
             tool_router,
             prompt_router,
             current_sparkler: Arc::new(RwLock::new(None)),
             workspace_path: Arc::new(workspace_path),
+            mode,
         }
     }
 
@@ -152,6 +162,10 @@ impl SparkleServer {
             }
         }
 
+        // Override sparkle_mode with server's configured mode
+        let mut params = params;
+        params.sparkle_mode = Some(self.mode.to_string());
+
         crate::tools::embody_sparkle::embody_sparkle(Parameters(params)).await
     }
 
@@ -166,7 +180,7 @@ impl SparkleServer {
     }
 
     #[tool(
-        description = "Save insights from meta moments to ~/.sparkle/evolution/ - captures pattern anchors, breakthrough insights, and cross-workspace connections"
+        description = "Save insights from meta moments - captures pattern anchors, breakthrough insights, and cross-workspace connections"
     )]
     async fn save_insight(
         &self,

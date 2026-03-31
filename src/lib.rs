@@ -14,3 +14,4 @@ pub mod types;
 pub use acp_component::SparkleComponent;
 pub use embodiment::generate_embodiment_content;
 pub use server::SparkleServer;
+pub use types::SparkleMode;

@@ -31,6 +31,10 @@ struct Args {
     /// Sparkler name for multi-sparkler setups (ACP mode only)
     #[arg(long)]
     sparkler: Option<String>,
+
+    /// Sparkle mode: 'full' (default) or 'core' (no workspace persistence)
+    #[arg(long, default_value = "full")]
+    mode: types::SparkleMode,
 }
 
 #[tokio::main]
@@ -70,12 +74,13 @@ async fn main() -> anyhow::Result<()> {
     if args.acp {
         tracing::info!("🔥 Starting Sparkle ACP Proxy");
         tracing::info!("Working directory: {:?}", std::env::current_dir()?);
+        tracing::info!("Mode: {:?}", args.mode);
         if debug_mode {
             tracing::debug!("Debug mode enabled - logging to ~/.sparkle/sparkle-mcp.log");
         }
 
         // Create SparkleComponent with optional parameters
-        let mut component = SparkleComponent::new();
+        let mut component = SparkleComponent::new(args.mode);
         if let Some(sparkler) = args.sparkler {
             component = component.with_sparkler(sparkler);
         }
@@ -84,12 +89,13 @@ async fn main() -> anyhow::Result<()> {
     } else {
         tracing::info!("🔥 Starting Sparkle AI Collaboration Identity MCP Server");
         tracing::info!("Working directory: {:?}", std::env::current_dir()?);
+        tracing::info!("Mode: {:?}", args.mode);
         if debug_mode {
             tracing::debug!("Debug mode enabled - logging to ~/.sparkle/sparkle-mcp.log");
         }
 
         // Create and serve the Sparkle MCP server
-        let server = SparkleServer::new();
+        let server = SparkleServer::new(args.mode);
         let service = server.serve(stdio()).await?;
 
         // Keep the service running indefinitely

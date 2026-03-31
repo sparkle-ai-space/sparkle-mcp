@@ -8,7 +8,7 @@ use crate::database::ExchangeDb;
 use crate::embodiment::generate_embodiment_content;
 use crate::server::SparkleServer;
 use crate::session_state::{PendingEmbodiments, PromptCounter, ResponseBuffer, SessionDbs};
-use crate::types::FullEmbodimentParams;
+use crate::types::{FullEmbodimentParams, SparkleMode};
 use anyhow::Result;
 use sacp::component::Component;
 use sacp::link::ConductorToProxy;
@@ -25,11 +25,13 @@ const MID_SESSION_CHECKPOINT_THRESHOLD: usize = 20;
 pub struct SparkleComponent {
     /// Optional sparkler name for multi-sparkler setups
     pub sparkler: Option<String>,
+    /// Sparkle operating mode
+    pub mode: SparkleMode,
 }
 
 impl SparkleComponent {
-    pub fn new() -> Self {
-        Self { sparkler: None }
+    pub fn new(mode: SparkleMode) -> Self {
+        Self { sparkler: None, mode }
     }
 
     pub fn with_sparkler(mut self, name: impl Into<String>) -> Self {
@@ -40,7 +42,7 @@ impl SparkleComponent {
 
 impl Default for SparkleComponent {
     fn default() -> Self {
-        Self::new()
+        Self::new(SparkleMode::Full)
     }
 }
 
@@ -53,6 +55,7 @@ impl Component<ProxyToConductor> for SparkleComponent {
                 .ok()
                 .and_then(|c| c.get_default_sparkler_name())
         });
+        let mode = self.mode;
         let pending = PendingEmbodiments::new();
         let session_dbs = SessionDbs::default();
         let response_buffer = ResponseBuffer::default();
@@ -75,7 +78,7 @@ impl Component<ProxyToConductor> for SparkleComponent {
 
                     let mcp_server = McpServer::from_rmcp("sparkle", {
                         let session_workspace_path = session_workspace_path.clone();
-                        move || SparkleServer::new_for_acp(session_workspace_path.clone())
+                        move || SparkleServer::new_for_acp(session_workspace_path.clone(), mode)
                     });
 
                     connection_cx
@@ -84,18 +87,26 @@ impl Component<ProxyToConductor> for SparkleComponent {
                         .on_proxy_session_start(request_cx, async move |session_id| {
                             tracing::info!(?session_id, "New session created, starting embodiment");
 
-                            // Initialize exchange logging
-                            init_exchange_db(&session_dbs, &session_id, &session_workspace_path, sparkler_name.as_deref());
+                            // Initialize exchange logging (skip in core mode)
+                            if mode == SparkleMode::Full {
+                                init_exchange_db(&session_dbs, &session_id, &session_workspace_path, sparkler_name.as_deref());
+                            }
 
                             // Mark session as pending (holds user prompts)
                             pending.mark_as_pending(session_id.clone());
 
-                            // Send embodiment prompt
+                            // Send embodiment prompt (core mode: no workspace path)
+                            let embodiment_workspace = if mode == SparkleMode::Full {
+                                Some(session_workspace_path)
+                            } else {
+                                None
+                            };
                             let embodiment_content =
                                 generate_embodiment_content(FullEmbodimentParams {
                                     mode: Some("complete".to_string()),
-                                    workspace_path: Some(session_workspace_path),
+                                    workspace_path: embodiment_workspace,
                                     sparkler: sparkler_name.clone(),
+                                    sparkle_mode: Some(mode.to_string()),
                                 })
                                 .map_err(sacp::util::internal_error)?;
 
@@ -107,7 +118,12 @@ impl Component<ProxyToConductor> for SparkleComponent {
                                 .on_receiving_result(async move |result| match result {
                                     Ok(PromptResponse { stop_reason: StopReason::EndTurn, .. }) => {
                                         tracing::info!(?session_id, "Embodiment completed successfully");
-                                        maybe_boot_checkpoint(&connection_cx, &session_dbs, &session_id, &pending).await
+                                        if mode == SparkleMode::Full {
+                                            maybe_boot_checkpoint(&connection_cx, &session_dbs, &session_id, &pending).await
+                                        } else {
+                                            pending.signal_completed(&session_id);
+                                            Ok(())
+                                        }
                                     }
                                     Ok(PromptResponse { stop_reason, .. }) => {
                                         tracing::warn!(?session_id, ?stop_reason, "Embodiment did not complete normally");
@@ -149,8 +165,8 @@ impl Component<ProxyToConductor> for SparkleComponent {
                         async move {
                             pending.await_completion(&session_id).await;
 
-                            // Mid-session checkpoint if threshold reached
-                            if user_prompt_count > 0 && user_prompt_count % MID_SESSION_CHECKPOINT_THRESHOLD == 0 {
+                            // Mid-session checkpoint if threshold reached (full mode only)
+                            if mode == SparkleMode::Full && user_prompt_count > 0 && user_prompt_count % MID_SESSION_CHECKPOINT_THRESHOLD == 0 {
                                 maybe_mid_session_checkpoint(&connection_cx, &session_dbs, &session_id, &prompt_counter).await;
                             }
 
