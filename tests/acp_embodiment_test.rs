@@ -65,7 +65,7 @@ impl Component<ProxyToConductor> for CapturingComponent {
     }
 }
 
-use sparkle_mcp::SparkleComponent;
+use sparkle_mcp::{SparkleComponent, SparkleMode};
 use tokio::io::duplex;
 use tokio_util::compat::{TokioAsyncReadCompatExt, TokioAsyncWriteCompatExt};
 
@@ -115,7 +115,7 @@ async fn run_embodiment_test() -> Result<(), sacp::Error> {
 
     // Create the component chain: SparkleComponent -> CapturingComponent -> elizacp
     let components = ProxiesAndAgent::new(elizacp::ElizaAgent::new())
-        .proxy(SparkleComponent::new())
+        .proxy(SparkleComponent::new(SparkleMode::Full))
         .proxy(CapturingComponent::new(captured_prompts.clone()));
 
     sacp::ClientToAgent::builder()

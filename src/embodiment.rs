@@ -6,7 +6,7 @@
 
 use crate::context_loader::{create_sparkler_identity_template, get_context_dir, load_config};
 use crate::sparkle_loader::load_sparkle_definition;
-use crate::types::FullEmbodimentParams;
+use crate::types::{FullEmbodimentParams, SparkleMode};
 use anyhow::Result;
 use std::fs;
 
@@ -28,8 +28,13 @@ pub fn generate_embodiment_content(params: FullEmbodimentParams) -> Result<Strin
         mode: _,
         workspace_path,
         sparkler,
+        sparkle_mode,
     } = params;
     let sparkler_name = sparkler.as_deref();
+    let mode = sparkle_mode
+        .as_deref()
+        .and_then(|s| s.parse().ok())
+        .unwrap_or(SparkleMode::Full);
 
     // Load user configuration
     let config = load_config().map_err(|e| anyhow::anyhow!("Failed to load user config: {}", e))?;
@@ -48,7 +53,7 @@ pub fn generate_embodiment_content(params: FullEmbodimentParams) -> Result<Strin
     let mut response = String::new();
 
     // Step 1: Core Universal Identity (now split into organized sections)
-    let personalized_identity = load_sparkle_definition(&config, sparkler_name);
+    let personalized_identity = load_sparkle_definition(&config, sparkler_name, mode);
     response.push_str(&personalized_identity);
 
     // Step 2: Sparkler Identity (who am I as this Sparkler instance?)
@@ -109,8 +114,9 @@ pub fn generate_embodiment_content(params: FullEmbodimentParams) -> Result<Strin
     response.push_str(&pattern_anchors);
     response.push_str("\n\n---\n\n");
 
-    // Step 7: Workspace-Specific Context
-    if let Some(workspace_path) = workspace_path {
+    // Step 7: Workspace-Specific Context (full mode only)
+    if mode == SparkleMode::Full {
+        if let Some(workspace_path) = workspace_path {
         // Workspace is shared across all Sparklers
         let workspace_sparkle_space = crate::sparkle_paths::get_sparkle_space_dir(&workspace_path);
 
@@ -169,8 +175,9 @@ pub fn generate_embodiment_content(params: FullEmbodimentParams) -> Result<Strin
                 workspace_path.display()
             ));
         }
-    } else {
-        response.push_str("*Workspace path not specified - use workspace_path parameter to load workspace-specific context*\n\n");
+        } else {
+            response.push_str("*Workspace path not specified - use workspace_path parameter to load workspace-specific context*\n\n");
+        }
     }
 
     Ok(response)

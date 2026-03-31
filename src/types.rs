@@ -1,7 +1,38 @@
 use std::path::PathBuf;
+use std::str::FromStr;
 
 use rmcp::schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
+
+/// Sparkle operating mode
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub enum SparkleMode {
+    /// Full Sparkle with workspace persistence (.sparkle-space/)
+    #[default]
+    Full,
+    /// Core Sparkle — identity + collaboration (~/.sparkle/) without workspace persistence
+    Core,
+}
+
+impl FromStr for SparkleMode {
+    type Err = String;
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s.to_lowercase().as_str() {
+            "full" => Ok(Self::Full),
+            "core" => Ok(Self::Core),
+            _ => Err(format!("unknown mode '{}', expected 'full' or 'core'", s)),
+        }
+    }
+}
+
+impl std::fmt::Display for SparkleMode {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::Full => write!(f, "full"),
+            Self::Core => write!(f, "core"),
+        }
+    }
+}
 
 // Config structures for multi-sparkler support
 #[derive(Debug, Serialize, Deserialize, Clone)]
@@ -70,6 +101,9 @@ pub struct FullEmbodimentParams {
     pub workspace_path: Option<PathBuf>,
     #[serde(default)]
     pub sparkler: Option<String>, // Which sparkler to embody (multi-sparkler mode)
+    /// Sparkle operating mode — "full" or "core". Defaults to full.
+    #[serde(default)]
+    pub sparkle_mode: Option<String>,
 }
 
 #[derive(Debug, Serialize, Deserialize, JsonSchema)]
