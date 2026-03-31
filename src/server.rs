@@ -166,7 +166,7 @@ impl SparkleServer {
     }
 
     #[tool(
-        description = "Save insights from meta moments to ~/.sparkle/evolution/ - captures pattern anchors, breakthrough insights, and cross-workspace connections"
+        description = "Save insights from meta moments - captures pattern anchors, breakthrough insights, and cross-workspace connections"
     )]
     async fn save_insight(
         &self,
