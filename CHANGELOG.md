@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.7.0](https://github.com/sparkle-ai-space/sparkle-mcp/compare/v0.6.2...v0.7.0) - 2026-03-31
+
+### Other
+
+- add Sparkle Modes page to mdbook
+- Sparkle Modes: full & core mode implementation
+- Sharpen insight recognition handles, fix save_insight description
+- Split identity Layer 2/3: extract workspace persistence from partnership
+- decouple insights from checkpoint prompt
+
 ## [0.6.2](https://github.com/sparkle-ai-space/sparkle-mcp/compare/v0.6.1...v0.6.2) - 2026-03-18
 
 ### Other
